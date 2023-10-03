@@ -1,0 +1,6 @@
+{
+    "forcing_file": "Forcing.txt",
+    "parameters": "4.0,0.6,420.0,2.25,0.1505,5.5,0.055,0.00505",
+    "initial_storage":"0,100,0,5",
+    "timestep": 1
+}
