@@ -34,10 +34,8 @@ class HBV(EmptyBmi):
 
         # define storage & flow terms, flows 0, storages initialised 
         s_in = np.array(self.config['initial_storage'].split(','),dtype=np.float64)
-        self.Si        = s_in[0] # Interception storage
-        self.Su        = s_in[1] # Unsaturated Rootzone Storage
-        self.Sf        = s_in[2] # Fastflow storage
-        self.Ss        = s_in[3] # Groundwater storage
+        self.set_storage(s_in)
+        # set other flows for initial step 
         self.Ei_dt     = 0       # interception evaporation
         self.Ea_dt     = 0       # actual evaportation
         self.Qs_dt     = 0       # slow flow 
@@ -54,7 +52,14 @@ class HBV(EmptyBmi):
         self.P_max  = par[4]                # Qus = Pmax * (Su/Sumax)
         self.T_lag  = self.set_tlag(par[5]) # used in triangular transfer function
         self.Kf     = par[6]                # Qf=kf*sf
-        self.Ks     = par[7]                # Qs=Ks*Ss
+        self.Ks     = par[7]                # Qs=Ks*
+
+    def set_storage(self, stor) -> None:
+        self.Si = stor[0] # Interception storage
+        self.Su = stor[1] # Unsaturated Rootzone Storage
+        self.Sf = stor[2] # Fastflow storage
+        self.Ss = stor[3] # Groundwater storage       
+        
 
     def update(self) -> None:
         """
@@ -78,7 +83,7 @@ class HBV(EmptyBmi):
             return of the objective function and corresponding dataframe
     
         """
-        if self.current_timestep < self.end_timestep:
+        if self.current_timestep <= self.end_timestep:
             self.P_dt  = self.df.P.iloc[self.current_timestep] * self.dt
             self.Ep_dt = self.df.EP.iloc[self.current_timestep]  * self.dt
         
@@ -226,6 +231,12 @@ class HBV(EmptyBmi):
         elif(var_name == "Q_m"):
             dest[:] = np.array(self.Q_m)
             return dest
+        elif(var_name == "storage_terms"):
+            dest[:] = np.array([self.Si, self.Su, self.Sf, self.Ss])
+            return dest
+        elif(var_name == "parameters"):
+            dest[:] = np.array([self.I_max, self.Ce, self.Su_max, self.beta, self.P_max, self.T_lag, self.Kf, self.Ks])
+            return dest
         else:
             raise ValueError(f"Unknown variable {var_name}")
 
@@ -323,7 +334,12 @@ class HBV(EmptyBmi):
 
     def get_current_time(self) -> float:
         """Return current time in seconds since 1 january 1970."""
-        return get_unixtime(self.df.index[self.current_timestep]) # type: ignore
+        # we get the timestep from the data, but the stopping condition requires it to go one beyond. 
+        if self.current_timestep < len(self.df):
+            return get_unixtime(self.df.index[self.current_timestep]) # type: ignore
+        else:
+            return get_unixtime(self.df.index[-1] + pd.Timedelta(days=1))
+    # return get_unixtime(self.df.loc[pd.Timestamp(model.get_current_time(), unit="s")]) # type: ignore
     
     def set_tlag(self, T_lag) -> int:
         "Ensures T_lag is an integer"
