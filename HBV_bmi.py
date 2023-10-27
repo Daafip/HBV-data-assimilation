@@ -29,7 +29,7 @@ class HBV(EmptyBmi):
         self.set_pars(np.array(self.config['parameters'].split(','),dtype=np.float64))
         
         # add memory vector for tlag & run weights function
-        self.memory_vector = np.zeros(self.T_lag)
+        self.memory_vector_lag = np.zeros(self.T_lag)
         self.weights = self.Weigfun()
 
         # define storage & flow terms, flows 0, storages initialised 
@@ -133,6 +133,7 @@ class HBV(EmptyBmi):
             self.Q_tot_dt = self.Qs_dt + self.Qf_dt
             # add time lag to the process
             self.add_time_lag()
+            # self.Q_m = self.Q_tot_dt
             
             # Advance the model time by one step
             self.current_timestep += 1
@@ -162,16 +163,16 @@ class HBV(EmptyBmi):
     
     def add_time_lag(self) -> None:
         # with support for T_lag =0
-        if len(self.memory_vector) > 0:        
+        if len(self.memory_vector_lag) > 0:        
             # Distribute current Q_tot_dt to memory vector
-            self.memory_vector += self.weights*self.Q_tot_dt
+            self.memory_vector_lag += self.weights*self.Q_tot_dt
             
             # Extract the latest Qm
-            self.Q_m = self.memory_vector[0]
+            self.Q_m = self.memory_vector_lag[0]
                      
             # Make a forecast to the next time step
-            self.memory_vector = np.roll(self.memory_vector,-1)  # This cycles the array [1,2,3,4] becomes [2,3,4,1]
-            self.memory_vector[-1] = 0                              # the next last entry becomes 0 (outside of convolution lag)
+            self.memory_vector_lag = np.roll(self.memory_vector_lag,-1)  # This cycles the array [1,2,3,4] becomes [2,3,4,1]
+            self.memory_vector_lag[-1] = 0                              # the next last entry becomes 0 (outside of convolution lag)
 
     def get_component_name(self) -> str:
         return "HBV"
@@ -193,7 +194,7 @@ class HBV(EmptyBmi):
             dest[:] = np.array(self.P_max)
             return dest
         elif(var_name == "Tlag"):
-            dest[:] = np.array(self.T_lag)
+            dest[:] = np.array(int(self.T_lag))
             return dest
         elif(var_name == "Kf"):
             dest[:] = np.array(self.Kf)
@@ -237,6 +238,8 @@ class HBV(EmptyBmi):
         elif(var_name == "parameters"):
             dest[:] = np.array([self.I_max, self.Ce, self.Su_max, self.beta, self.P_max, self.T_lag, self.Kf, self.Ks])
             return dest
+        elif(var_name == "memory_vector_lag"):
+            return self.memory_vector_lag 
         else:
             raise ValueError(f"Unknown variable {var_name}")
 
@@ -317,6 +320,8 @@ class HBV(EmptyBmi):
             self.Q_tot_dt = src[0]
         elif(var_name == "Q_m"):
             self.Qm = src[0]
+        elif(var_name == "memory_vector_lag"):
+            self.memory_vector_lag = src
         else:
             raise ValueError(f"Unknown variable {var_name}")
 
