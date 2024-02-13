@@ -3,6 +3,9 @@ _Add more info on origin_
 
 Original model is from the course ENVM1502 - river basin Hydrology (Markus Hrachowitz). 
 
+NOTE: the implementation of the memory vector is likely wrong here. The DA technique compensates for this and causes it to work.
+For a working version with a proper memory vector, refer to recent developments of the HBV-bmi for [eWaterCycle](https://github.com/Daafip/HBV-bmi)
+
 ## Overview of code: 
 
 - `Forcing.txt` contains the real observational data
